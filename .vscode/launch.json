@@ -1,0 +1,34 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Remote Debug RoverBrain (Dynamic)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build_dynamic/rover_brain",
+            "args": [],
+            "stopAtEntry": true,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb-multiarch",
+            "miDebuggerServerAddress": "localhost:1234",
+            "setupCommands": [
+                {
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "text": "set sysroot /",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "Run QEMU GDB Server",
+            "postDebugTask": "Teardown QEMU"
+        }
+    ]
+}

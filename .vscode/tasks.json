@@ -1,0 +1,107 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "CMake: Configure Dynamic",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "-S",
+                ".",
+                "-B",
+                "build_dynamic",
+                "-DCMAKE_BUILD_TYPE=Debug",
+                "-DCMAKE_TOOLCHAIN_FILE=${workspaceFolder}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+                "-DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=${workspaceFolder}/aarch64-toolchain.cmake",
+                "-DVCPKG_TARGET_TRIPLET=arm64-linux",
+                "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "CMake: Build Dynamic",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build",
+                "build_dynamic",
+                "-j",
+                "4"
+            ],
+            "group": "build",
+            "dependsOn": "CMake: Configure Dynamic",
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "CMake: Configure Static",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "-S",
+                ".",
+                "-B",
+                "build_static",
+                "-DCMAKE_TOOLCHAIN_FILE=${workspaceFolder}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+                "-DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=${workspaceFolder}/aarch64-toolchain.cmake",
+                "-DVCPKG_TARGET_TRIPLET=arm64-linux",
+                "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "CMake: Build Static",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build",
+                "build_static",
+                "-j",
+                "4"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "dependsOn": "CMake: Configure Static",
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "Run QEMU GDB Server",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "echo 'QEMU_READY' && qemu-aarch64 -L /usr/aarch64-linux-gnu/ -g 1234 ${workspaceFolder}/build_dynamic/rover_brain"
+            ],
+            "isBackground": true,
+            "problemMatcher": [
+                {
+                    "pattern": [
+                        {
+                            "regexp": ".",
+                            "file": 1,
+                            "location": 2,
+                            "message": 3
+                        }
+                    ],
+                    "background": {
+                        "activeOnStart": true,
+                        "beginsPattern": "^QEMU_READY$",
+                        "endsPattern": "^QEMU_READY$"
+                    }
+                }
+            ],
+            "dependsOn": "CMake: Build Dynamic"
+        },
+        {
+            "label": "Teardown QEMU",
+            "type": "shell",
+            "command": "killall qemu-aarch64 || true",
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared",
+                "showReuseMessage": false
+            }
+        }
+    ]
+}
