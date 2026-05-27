@@ -1,75 +1,75 @@
 /**
  * @file main.cpp
- * @brief Minimal HTTP server for network configuration testing.
+ * @brief Application entry point for the Rover Brain central processing node.
  *
- * This module utilizes standalone ASIO to open a synchronous TCP socket,
- * listen for incoming HTTP GET requests, and return a basic plaintext response.
- * It serves as a verification step for the aarch64 cross-compilation and
- * QEMU user-space emulation pipeline.
- *
- * @author Duẫy
+ * Bootstraps the execution environment, parses runtime configurations, and
+ * instantiates the CommanderEngine. Implements POSIX signal handling to
+ * guarantee graceful degradation and hardware teardown upon termination.
  */
 
 #include <iostream>
-#include <string>
-#include <asio.hpp>
+#include <csignal>
+#include <atomic>
+#include <thread>
+#include <chrono>
+#include "./CommanderEngine.hpp"
+
+///< Global pointer required to map POSIX asynchronous OS signals to class methods.
+CommanderEngine *g_engine_ptr = nullptr;
 
 /**
- * @brief Handles a single client connection.
- *
- * Reads the incoming HTTP request headers until a double carriage-return
- * line-feed is encountered, then transmits a standard HTTP 200 OK response.
- *
- * @param socket The active TCP socket connected to the client.
+ * @brief Asynchronous interrupt handler capturing OS-level termination requests.
+ * @param signum The POSIX signal identifier (e.g., SIGINT from Ctrl+C).
  */
-void handle_client(asio::ip::tcp::socket &socket)
-
+void signal_handler(int signum)
 {
-    try
+    std::cout << "\n[SYSTEM] Intercepted termination signal (" << signum << "). Initiating graceful shutdown...\n";
+    if (g_engine_ptr)
     {
-        asio::streambuf request;
-        asio::read_until(socket, request, "\r\n\r\n");
-
-        std::string response =
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Type: text/plain; charset=utf-8\r\n"
-            "Connection: close\r\n"
-            "\r\n"
-            "xin chào\n";
-
-        asio::write(socket, asio::buffer(response));
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << "Client connection error: " << e.what() << "\n";
+        g_engine_ptr->stop(); ///< Safely tear down network threads and release UART file descriptors.
     }
 }
 
-/**
- * @brief Entry point for the test server.
- *
- * Initializes the ASIO context, binds to port 8080, and enters an
- * infinite loop to accept and process incoming TCP connections.
- */
 int main()
 {
+    std::cout << "=================================================\n";
+    std::cout << "          ROVER BRAIN - FIRMWARE v2.0            \n";
+    std::cout << "=================================================\n";
+
+    // Register OS signal traps for clean exits (Ctrl+C or kill commands)
+    std::signal(SIGINT, signal_handler);
+    std::signal(SIGTERM, signal_handler);
+
     try
     {
-        asio::io_context io_context;
-        asio::ip::tcp::acceptor acceptor(io_context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), 8080));
+        // Absolute hardware path for Pi Zero 2W primary UART
+        const std::string UART_DEVICE = "/dev/serial0";
+        const uint16_t UDP_LISTEN_PORT = 5005;
+        const unsigned int BAUD_RATE = 115200;
+        const std::string CONFIG_PATH = "./rover_config.json";
 
-        std::cout << "Test server listening on port 8080...\n";
+        std::cout << "[SYSTEM] Bootstrapping Commander Engine...\n";
+        std::cout << "  -> Network Port : " << UDP_LISTEN_PORT << " (UDP)\n";
+        std::cout << "  -> UART Device  : " << UART_DEVICE << " @ " << BAUD_RATE << " bps\n";
 
-        while (true)
-        {
-            asio::ip::tcp::socket socket(io_context);
-            acceptor.accept(socket);
-            handle_client(socket);
-        }
+        // Instantiate the core orchestrator
+        CommanderEngine engine(UDP_LISTEN_PORT, UART_DEVICE, BAUD_RATE, CONFIG_PATH);
+
+        // Map the global pointer for the signal handler
+        g_engine_ptr = &engine;
+
+        std::cout << "[SYSTEM] Engine is LIVE. Entering deterministic hardware loop.\n";
+        std::cout << "[SYSTEM] Press Ctrl+C to terminate safely.\n";
+        std::cout << "-------------------------------------------------\n";
+
+        // This call blocks the main thread, looping at 50Hz until engine.stop() is called
+        engine.start();
+
+        std::cout << "[SYSTEM] Hardware loop terminated. Core dumped safely. Goodbye!\n";
     }
     catch (const std::exception &e)
     {
-        std::cerr << "Server initialization failure: " << e.what() << "\n";
+        std::cerr << "[FATAL ERROR] Unhandled system exception: " << e.what() << "\n";
         return 1;
     }
 

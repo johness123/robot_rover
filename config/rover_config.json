@@ -1,0 +1,20 @@
+{
+    "dimensions": {
+        "track_width_mm": 286.125,
+        "wheel_radius_mm": 21.34,
+        "length_front_mm": 174.0,
+        "length_rear_mm": 198.001
+    },
+    "limits": {
+        "max_steer_angle_deg": 45.0,
+        "motor_deadzone_percent": 15
+    },
+    "servo_offsets_deg": {
+        "fl": -3,
+        "fr": 2,
+        "ml": 0,
+        "mr": 0,
+        "rl": 1,
+        "rr": -1
+    }
+}

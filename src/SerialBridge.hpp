@@ -31,7 +31,7 @@ public:
      *
      * @param cmd The populated command structure retrieved from the ActorStateBuffer.
      */
-    void transmit_wheel_command(const WheelActorCommand &cmd);
+    void transmit_wheel_command(const HardwareWheelCommand &cmd);
 
 private:
     asio::serial_port m_serial;

@@ -71,7 +71,7 @@
             "command": "bash",
             "args": [
                 "-c",
-                "echo 'QEMU_READY' && qemu-aarch64 -L /usr/aarch64-linux-gnu/ -g 1234 ${workspaceFolder}/build_dynamic/rover_brain"
+                "echo 'QEMU_READY' && qemu-aarch64 -L /usr/aarch64-linux-gnu/ -g 1234 ${workspaceFolder}/build_dynamic/rover_brain 5005 172.30.128.1 5006 ",
             ],
             "isBackground": true,
             "problemMatcher": [
@@ -100,7 +100,8 @@
             "presentation": {
                 "reveal": "silent",
                 "panel": "shared",
-                "showReuseMessage": false
+                "showReuseMessage": false,
+                "close": true
             }
         }
     ]

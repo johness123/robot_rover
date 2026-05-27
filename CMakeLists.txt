@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(asio CONFIG REQUIRED)
 find_package(Threads REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 
 
 file(GLOB_RECURSE ROVER_SOURCES CONFIGURE_DEPENDS "src/*.cpp")
@@ -22,6 +23,7 @@ target_link_libraries(rover_brain
     PRIVATE 
         asio::asio
         Threads::Threads
+        nlohmann_json::nlohmann_json
 )
 
 

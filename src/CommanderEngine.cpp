@@ -1,16 +1,20 @@
 #include "CommanderEngine.hpp"
 #include <chrono>
 
-CommanderEngine::CommanderEngine(uint16_t udp_port, const std::string &serial_port, unsigned int baud_rate)
-    : m_receiver(m_io_context, udp_port),
+CommanderEngine::CommanderEngine(uint16_t udp_port, const std::string &serial_port, unsigned int baud_rate, const std::string &config_path)
+    : m_receiver(m_io_context, udp_port, ROVER_MAGIC_KEY, ROVER_HANDSHAKE_KEY),
       m_serial_bridge(m_io_context, serial_port, baud_rate),
+      m_solver(RoverConfig::load_from_file(config_path)),
       m_running(false)
 {
-    m_receiver.register_handler(0x01, [this](const uint8_t *data, std::size_t size)
-                                { m_wheel_buffer.update_from_network(data, size); });
-
-    m_receiver.register_handler(0x02, [this](const uint8_t *data, std::size_t size)
-                                { m_camera_buffer.update_from_network(data, size); });
+    // Register the intent callback handler for the chassis actor (0x01)
+    m_receiver.register_intent_handler(0x01, [this](const RoverIntentCommand &cmd)
+                                       {
+                                           // Execute localized kinematic translation immediately on network ingress
+                                           HardwareWheelCommand hw_cmd = m_solver.solve(cmd);
+                                           
+                                           // Commit calculated low-level joint states into the thread-safe state buffer
+                                           m_wheel_buffer.update_from_network(reinterpret_cast<const uint8_t*>(&hw_cmd), sizeof(HardwareWheelCommand)); });
 }
 
 CommanderEngine::~CommanderEngine()
@@ -39,19 +43,34 @@ void CommanderEngine::stop()
 
 void CommanderEngine::hardware_tick_loop()
 {
-    constexpr auto TICK_INTERVAL = std::chrono::milliseconds(50);
+    // UPDATE: 50Hz execution rate (1000ms / 50Hz = 20ms per hardware tick)
+    constexpr auto TICK_INTERVAL = std::chrono::milliseconds(20);
+
+    // Failsafe triggers remain the same (250ms = 12.5 missed packets at 50Hz)
     constexpr auto NETWORK_TIMEOUT = std::chrono::milliseconds(250);
+    constexpr auto TOTAL_CONNECTION_LOSS_TIMEOUT = std::chrono::milliseconds(3000);
 
     while (m_running)
     {
         auto next_tick_time = std::chrono::steady_clock::now() + TICK_INTERVAL;
 
+        // Critical Link Check 1: Evaluate absolute connection loss threshold for topology restoration
+        if (m_wheel_buffer.is_stale(TOTAL_CONNECTION_LOSS_TIMEOUT))
+        {
+            if (m_receiver.get_state() == ReceiverState::CONNECTED)
+            {
+                // Force network teardown to re-enter discovery state allowing new host registration
+                m_receiver.reset_connection();
+            }
+        }
+
+        // Critical Link Check 2: Evaluate transient packet staleness for deterministic failsafe execution
         if (m_wheel_buffer.is_stale(NETWORK_TIMEOUT))
         {
-            WheelActorCommand emergency_cmd = {0};
+            HardwareWheelCommand emergency_cmd = {0};
             emergency_cmd.actor_id = 0x01;
-            emergency_cmd.motor_power = 0;
             emergency_cmd.emergency_brake = 1;
+            // All localized wheel power parameters are initialized to zero implicitly via structure aggregation
 
             m_serial_bridge.transmit_wheel_command(emergency_cmd);
         }

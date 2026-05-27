@@ -20,20 +20,20 @@ uint8_t SerialBridge::calculate_checksum(const uint8_t *payload, std::size_t len
     return checksum;
 }
 
-void SerialBridge::transmit_wheel_command(const WheelActorCommand &cmd)
+void SerialBridge::transmit_wheel_command(const HardwareWheelCommand &cmd)
 {
     std::vector<uint8_t> frame;
-    frame.reserve(sizeof(WheelActorCommand) + 3);
+    frame.reserve(sizeof(HardwareWheelCommand) + 3);
 
     frame.push_back(0xAA);
 
     const uint8_t *cmd_ptr = reinterpret_cast<const uint8_t *>(&cmd);
-    for (std::size_t i = 0; i < sizeof(WheelActorCommand); ++i)
+    for (std::size_t i = 0; i < sizeof(HardwareWheelCommand); ++i)
     {
         frame.push_back(cmd_ptr[i]);
     }
 
-    frame.push_back(calculate_checksum(cmd_ptr, sizeof(WheelActorCommand)));
+    frame.push_back(calculate_checksum(cmd_ptr, sizeof(HardwareWheelCommand)));
 
     frame.push_back(0x55);
 
