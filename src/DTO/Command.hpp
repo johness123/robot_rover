@@ -28,7 +28,6 @@ struct RoverIntentCommand
     uint8_t emergency_brake;
 };
 
-#pragma pack(push, 1)
 struct HardwareWheelCommand
 {
     uint8_t actor_id; // 1 Byte -> 0x01

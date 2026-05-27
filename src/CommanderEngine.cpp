@@ -55,11 +55,11 @@ void CommanderEngine::hardware_tick_loop()
         auto next_tick_time = std::chrono::steady_clock::now() + TICK_INTERVAL;
 
         // Critical Link Check 1: Evaluate absolute connection loss threshold for topology restoration
-        if (m_wheel_buffer.is_stale(TOTAL_CONNECTION_LOSS_TIMEOUT))
+        if (m_receiver.get_state() == ReceiverState::CONNECTED)
         {
-            if (m_receiver.get_state() == ReceiverState::CONNECTED)
+            if (m_receiver.is_connection_lost(TOTAL_CONNECTION_LOSS_TIMEOUT))
             {
-                // Force network teardown to re-enter discovery state allowing new host registration
+                std::cout << "[SYSTEM] Watchdog triggered (3000ms). Terminating dead link.\n";
                 m_receiver.reset_connection();
             }
         }

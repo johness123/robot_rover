@@ -7,6 +7,7 @@
 #include <iostream>
 #include <cstring>
 #include "DTO/Command.hpp"
+#include <chrono>
 
 #define ACK_ 0x41434B5F
 
@@ -42,7 +43,8 @@ public:
           m_state(ReceiverState::DISCOVERING),
           m_magic_key(magic_key),
           m_handshake_key(handshake_key),
-          m_latest_sequence(0)
+          m_latest_sequence(0),
+          m_last_activity(std::chrono::steady_clock::now())
     {
         start_receive();
     }
@@ -78,6 +80,11 @@ public:
      * @brief Inline public accessor exposing the current connectivity topology status.
      */
     ReceiverState get_state() const { return m_state; }
+
+    bool is_connection_lost(std::chrono::milliseconds timeout) const
+    {
+        return (std::chrono::steady_clock::now() - m_last_activity) > timeout;
+    }
 
 private:
     /**
@@ -126,8 +133,9 @@ private:
                 {
                     m_state = ReceiverState::CONNECTED;
 
-                    uint32_t ack_token = ACK_; ///< Response verification pattern ("ACK_").
-                    m_socket.send(asio::buffer(&ack_token, sizeof(ack_token)), 0, ec);
+                    // uint32_t ack_token = ACK_; ///< Response verification pattern ("ACK_").
+                    m_last_activity = std::chrono::steady_clock::now();
+                    m_socket.send(asio::buffer(&handshake, sizeof(RoverIncomingHandshake)), 0, ec);
 
                     std::cout << "[NET] Authenticated handshake verified. Associated with remote host: "
                               << m_remote_endpoint.address().to_string() << ":" << m_remote_endpoint.port() << "\n";
@@ -150,6 +158,7 @@ private:
             if (m_latest_sequence > 0 && cmd.header.sequence_num <= m_latest_sequence)
                 return;
             m_latest_sequence = cmd.header.sequence_num;
+            m_last_activity = std::chrono::steady_clock::now();
 
             auto it = m_handlers.find(cmd.actor_id);
             if (it != m_handlers.end())
@@ -178,4 +187,5 @@ private:
     uint32_t m_handshake_key;                               ///< Discovery validation passcode used for host enrollment constraints.
     uint32_t m_latest_sequence;                             ///< Storage tracking current replay mitigation ceiling values.
     std::unordered_map<uint8_t, IntentCallback> m_handlers; ///< Registry associative array distributing tasks to targets.
+    std::chrono::steady_clock::time_point m_last_activity;  ///< Temporal marker of the last valid network packet.
 };
