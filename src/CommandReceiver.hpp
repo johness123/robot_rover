@@ -80,6 +80,14 @@ public:
      * @brief Inline public accessor exposing the current connectivity topology status.
      */
     ReceiverState get_state() const { return m_state; }
+    std::string get_client_ip() const
+    {
+        if (m_state == ReceiverState::CONNECTED)
+        {
+            return m_remote_endpoint.address().to_string();
+        }
+        return "";
+    }
 
     bool is_connection_lost(std::chrono::milliseconds timeout) const
     {

@@ -49,19 +49,44 @@ void CommanderEngine::hardware_tick_loop()
     // Failsafe triggers remain the same (250ms = 12.5 missed packets at 50Hz)
     constexpr auto NETWORK_TIMEOUT = std::chrono::milliseconds(250);
     constexpr auto TOTAL_CONNECTION_LOSS_TIMEOUT = std::chrono::milliseconds(3000);
+    bool was_connected = false;
 
     while (m_running)
     {
         auto next_tick_time = std::chrono::steady_clock::now() + TICK_INTERVAL;
 
-        // Critical Link Check 1: Evaluate absolute connection loss threshold for topology restoration
+        // --- STEP 1: WATCHDOG (INTERVENE NETWORK STATE) ---
+        // If connected, evaluate whether the signal has been lost for more than 3s
         if (m_receiver.get_state() == ReceiverState::CONNECTED)
         {
             if (m_receiver.is_connection_lost(TOTAL_CONNECTION_LOSS_TIMEOUT))
             {
                 std::cout << "[SYSTEM] Watchdog triggered (3000ms). Terminating dead link.\n";
+                // This command discards the CONNECTED state, reverting to DISCOVERING
                 m_receiver.reset_connection();
             }
+        }
+
+        // --- STEP 2: LATCH STATE (After Watchdog may have terminated) ---
+        bool is_connected = (m_receiver.get_state() == ReceiverState::CONNECTED);
+
+        // --- STEP 3: CAMERA COORDINATOR (RUNS ONLY ONCE UPON STATE TRANSITION) ---
+        if (is_connected && !was_connected)
+        {
+            // State: Just connected
+            std::string pc_ip = m_receiver.get_client_ip();
+            if (!pc_ip.empty())
+            {
+                std::cout << "[SYSTEM] Handshake locked. Routing video to " << pc_ip << "\n";
+                m_video_stream.start(pc_ip, 5000);
+            }
+            was_connected = true; // Lock flag, subsequent iterations will not enter here anymore
+        }
+        else if (!is_connected && was_connected)
+        {
+            // State: Just disconnected
+            m_video_stream.stop();
+            was_connected = false; // Lock flag, subsequent iterations will not waste CPU calling stop() anymore
         }
 
         // Critical Link Check 2: Evaluate transient packet staleness for deterministic failsafe execution

@@ -11,6 +11,7 @@
 #include "./KinematicSolver.hpp"
 #include "./RoverConfig.hpp"
 #include "./DTO/Command.hpp"
+#include "./VideoStreamManager.hpp"
 
 /**
  * @class CommanderEngine
@@ -60,6 +61,8 @@ private:
     KinematicSolver m_solver;      ///< Kinematics translation block converting high-level intents to joint outputs.
 
     ActorStateBuffer<HardwareWheelCommand> m_wheel_buffer; ///< Thread-safe buffer housing pending physical joint commands.
+
+    VideoStreamManager m_video_stream; ///< Orchestrator for the hardware-accelerated FPV camera.
 
     std::thread m_network_thread; ///< Dedicated worker isolation thread processing incoming network packets.
     std::atomic<bool> m_running;  ///< Core execution lifecycle flag governing loop continuation constraints.
