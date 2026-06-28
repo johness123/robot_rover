@@ -33,7 +33,7 @@ public:
      * @param target_port The destination UDP port to transmit the RTP payload.
      * @return true If the child process was successfully spawned.
      */
-    bool start(const std::string &target_ip, uint16_t target_port)
+    bool start(const std::string &target_ip, std::string target_port)
     {
         if (m_child_pid > 0)
         {
@@ -45,7 +45,7 @@ public:
         std::string pipeline = "rpicam-vid -t 0 --inline --width 800 --height 600 --framerate 30 --codec h264 -o - | "
                                "gst-launch-1.0 fdsrc ! h264parse ! rtph264pay config-interval=1 pt=96 ! "
                                "udpsink host=" +
-                               target_ip + " port=" + std::to_string(target_port);
+                               target_ip + " port=" + target_port;
 
         pid_t pid = fork(); ///< Clone the current OS process.
 

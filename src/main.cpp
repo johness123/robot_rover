@@ -13,6 +13,7 @@
 #include <thread>
 #include <chrono>
 #include "./CommanderEngine.hpp"
+#include "./RoverConfig.hpp"
 
 ///< Global pointer required to map POSIX asynchronous OS signals to class methods.
 CommanderEngine *g_engine_ptr = nullptr;
@@ -33,7 +34,7 @@ void signal_handler(int signum)
 int main()
 {
     std::cout << "=================================================\n";
-    std::cout << "          ROVER BRAIN - FIRMWARE v2.0            \n";
+    std::cout << "          ROVER BRAIN - FIRMWARE v2.5            \n";
     std::cout << "=================================================\n";
 
     // Register OS signal traps for clean exits (Ctrl+C or kill commands)
@@ -46,14 +47,14 @@ int main()
         const std::string UART_DEVICE = "/dev/serial0";
         const uint16_t UDP_LISTEN_PORT = 5005;
         const unsigned int BAUD_RATE = 115200;
-        const std::string CONFIG_PATH = "./rover_config.json";
-
+        // const std::string CONFIG_PATH = "./rover_config.json";
+        const RoverConfig config = RoverConfig::load_from_file("./rover_config.json");
         std::cout << "[SYSTEM] Bootstrapping Commander Engine...\n";
         std::cout << "  -> Network Port : " << UDP_LISTEN_PORT << " (UDP)\n";
         std::cout << "  -> UART Device  : " << UART_DEVICE << " @ " << BAUD_RATE << " bps\n";
 
         // Instantiate the core orchestrator
-        CommanderEngine engine(UDP_LISTEN_PORT, UART_DEVICE, BAUD_RATE, CONFIG_PATH);
+        CommanderEngine engine(UDP_LISTEN_PORT, UART_DEVICE, BAUD_RATE, config);
 
         // Map the global pointer for the signal handler
         g_engine_ptr = &engine;

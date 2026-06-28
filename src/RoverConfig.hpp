@@ -4,6 +4,7 @@
 #include <iostream>
 #include <cmath>
 #include <nlohmann/json.hpp>
+#include <string>
 
 using json = nlohmann::json;
 
@@ -16,6 +17,8 @@ struct RoverConfig
 
     double max_steer_angle_rad;
     int8_t motor_deadzone;
+
+    std::string camera_commander_port;
 
     // Servo offsets
     int8_t offset_fl, offset_fr, offset_ml, offset_mr, offset_rl, offset_rr;
@@ -53,6 +56,8 @@ struct RoverConfig
             config.offset_mr = j["servo_offsets_deg"]["mr"];
             config.offset_rl = j["servo_offsets_deg"]["rl"];
             config.offset_rr = j["servo_offsets_deg"]["rr"];
+
+            config.camera_commander_port = j["camera_commander_port"];
 
             std::cout << "[CONFIG] Đã nạp thành công file cấu hình cơ khí!\n";
         }

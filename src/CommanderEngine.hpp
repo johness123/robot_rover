@@ -32,7 +32,7 @@ public:
      * @param baud_rate Serial transmission speed assigned to the UART interface.
      * @param config_path System file path pointing to the JSON configuration file.
      */
-    CommanderEngine(uint16_t udp_port, const std::string &serial_port, unsigned int baud_rate, const std::string &config_path);
+    CommanderEngine(uint16_t udp_port, const std::string &serial_port, unsigned int baud_rate, const RoverConfig &config);
 
     /**
      * @brief Destructor ensuring safe teardown of threads and socket allocations.
@@ -59,7 +59,7 @@ private:
     CommandReceiver m_receiver;    ///< Authenticated network receiver managing UDP topologies.
     SerialBridge m_serial_bridge;  ///< Hardware abstraction layer serialization bridge interfacing with the MCU.
     KinematicSolver m_solver;      ///< Kinematics translation block converting high-level intents to joint outputs.
-
+    RoverConfig m_config;
     ActorStateBuffer<HardwareWheelCommand> m_wheel_buffer; ///< Thread-safe buffer housing pending physical joint commands.
 
     VideoStreamManager m_video_stream; ///< Orchestrator for the hardware-accelerated FPV camera.

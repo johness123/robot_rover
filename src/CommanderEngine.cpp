@@ -1,10 +1,11 @@
 #include "CommanderEngine.hpp"
 #include <chrono>
 
-CommanderEngine::CommanderEngine(uint16_t udp_port, const std::string &serial_port, unsigned int baud_rate, const std::string &config_path)
+CommanderEngine::CommanderEngine(uint16_t udp_port, const std::string &serial_port, unsigned int baud_rate, const RoverConfig &config)
     : m_receiver(m_io_context, udp_port, ROVER_MAGIC_KEY, ROVER_HANDSHAKE_KEY),
       m_serial_bridge(m_io_context, serial_port, baud_rate),
-      m_solver(RoverConfig::load_from_file(config_path)),
+      m_solver(config),
+      m_config(config),
       m_running(false)
 {
     // Register the intent callback handler for the chassis actor (0x01)
@@ -78,7 +79,7 @@ void CommanderEngine::hardware_tick_loop()
             if (!pc_ip.empty())
             {
                 std::cout << "[SYSTEM] Handshake locked. Routing video to " << pc_ip << "\n";
-                m_video_stream.start(pc_ip, 5000);
+                m_video_stream.start(pc_ip, m_config.camera_commander_port);
             }
             was_connected = true; // Lock flag, subsequent iterations will not enter here anymore
         }
